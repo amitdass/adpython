@@ -33,22 +33,9 @@ DEFAULT_YAW_MAX = 75.0
 DEFAULT_PITCH_MIN = -25.0
 DEFAULT_PITCH_MAX = 25.0
 DEFAULT_STEP = 5.0
-DEFAULT_MAX_ROLL = 15.0
+# Aligned faces are near upright; keep a loose guard only.
+DEFAULT_MAX_ROLL = 45.0
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
-
-# Canonical 3D face model points (mm-ish), paired with MediaPipe landmark indices
-MODEL_POINTS_3D = np.array(
-    [
-        [0.0, 0.0, 0.0],  # nose tip
-        [0.0, -330.0, -65.0],  # chin
-        [-225.0, 170.0, -135.0],  # left eye outer
-        [225.0, 170.0, -135.0],  # right eye outer
-        [-150.0, -150.0, -125.0],  # left mouth
-        [150.0, -150.0, -125.0],  # right mouth
-    ],
-    dtype=np.float64,
-)
-LANDMARK_IDS = (1, 152, 33, 263, 61, 291)
 
 MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/"
@@ -162,49 +149,64 @@ def in_range(value: float, vmin: float, vmax: float, step: float) -> bool:
     return vmin - 1e-6 <= c <= vmax + 1e-6
 
 
-def rotation_matrix_to_euler(r: np.ndarray) -> tuple[float, float, float]:
-    """Return yaw, pitch, roll in degrees (yaw=left/right, pitch=up/down)."""
-    sy = math.sqrt(r[0, 0] ** 2 + r[1, 0] ** 2)
-    if sy > 1e-6:
-        pitch = math.degrees(math.atan2(-r[2, 0], sy))
-        yaw = math.degrees(math.atan2(r[1, 0], r[0, 0]))
-        roll = math.degrees(math.atan2(r[2, 1], r[2, 2]))
-    else:
-        pitch = math.degrees(math.atan2(-r[2, 0], sy))
-        yaw = math.degrees(math.atan2(-r[0, 1], r[1, 1]))
-        roll = 0.0
-    # MediaPipe/OpenCV camera convention → intuitive face pose:
-    # positive yaw = subject turned toward their left (camera sees right cheek)
+def rotation_matrix_to_yaw_pitch_roll(r: np.ndarray) -> tuple[float, float, float]:
+    """MediaPipe-style Euler degrees: yaw=left/right, pitch=up/down, roll=tilt."""
+    # x=pitch, y=yaw, z=roll  (common MediaPipe face-geometry extraction)
+    pitch = math.degrees(math.atan2(r[2, 1], r[2, 2]))
+    yaw = math.degrees(
+        math.atan2(-r[2, 0], math.sqrt(r[0, 0] ** 2 + r[1, 0] ** 2))
+    )
+    roll = math.degrees(math.atan2(r[1, 0], r[0, 0]))
     return yaw, pitch, roll
 
 
-def estimate_pose_from_landmarks(
-    landmarks, width: int, height: int
+def estimate_pose_from_transform_matrix(
+    matrix: np.ndarray,
 ) -> tuple[float, float, float] | None:
-    image_points = []
-    for idx in LANDMARK_IDS:
-        lm = landmarks[idx]
-        image_points.append([lm.x * width, lm.y * height])
-    image_points = np.array(image_points, dtype=np.float64)
-
-    focal = width
-    center = (width / 2.0, height / 2.0)
-    camera_matrix = np.array(
-        [[focal, 0, center[0]], [0, focal, center[1]], [0, 0, 1]],
-        dtype=np.float64,
-    )
-    dist = np.zeros((4, 1), dtype=np.float64)
-    ok, rvec, _tvec = cv2.solvePnP(
-        MODEL_POINTS_3D,
-        image_points,
-        camera_matrix,
-        dist,
-        flags=cv2.SOLVEPNP_ITERATIVE,
-    )
-    if not ok:
+    """Pose from MediaPipe facial_transformation_matrix (4x4)."""
+    if matrix is None:
         return None
-    rot, _ = cv2.Rodrigues(rvec)
-    return rotation_matrix_to_euler(rot)
+    mat = np.asarray(matrix, dtype=np.float64)
+    if mat.shape != (4, 4):
+        return None
+    return rotation_matrix_to_yaw_pitch_roll(mat[:3, :3])
+
+
+def estimate_pose_from_landmarks_geom(
+    landmarks,
+) -> tuple[float, float, float]:
+    """
+    Geometric pose from MediaPipe landmark xyz (normalized).
+    Preferred for DeepFaceLab-style *aligned* crops where solvePnP roll is unreliable.
+    """
+    nose = landmarks[1]
+    chin = landmarks[152]
+    left_eye = landmarks[33]
+    right_eye = landmarks[263]
+    left_mouth = landmarks[61]
+    right_mouth = landmarks[291]
+    forehead = landmarks[10]
+
+    # Roll from eye line in image plane (near 0 on aligned faces)
+    roll = math.degrees(
+        math.atan2((right_eye.y - left_eye.y), (right_eye.x - left_eye.x) + 1e-9)
+    )
+
+    # Yaw: image offset + depth asymmetry between eyes
+    eye_mid_x = 0.5 * (left_eye.x + right_eye.x)
+    eye_span = abs(right_eye.x - left_eye.x) + 1e-9
+    yaw_xy = (nose.x - eye_mid_x) / eye_span * 95.0
+    z_asym = (left_eye.z - right_eye.z) / (abs(left_eye.z) + abs(right_eye.z) + 1e-9)
+    yaw = 0.55 * yaw_xy + 0.45 * (z_asym * 95.0)
+
+    # Pitch from nose vs mid eye–mouth, normalized by face height
+    eye_mid_y = 0.5 * (left_eye.y + right_eye.y)
+    mouth_mid_y = 0.5 * (left_mouth.y + right_mouth.y)
+    face_h = abs(chin.y - forehead.y) + 1e-9
+    expected_nose_y = 0.5 * (eye_mid_y + mouth_mid_y)
+    pitch = (nose.y - expected_nose_y) / face_h * 130.0
+
+    return yaw, pitch, roll
 
 
 def sharpness_score(gray: np.ndarray) -> float:
@@ -228,6 +230,7 @@ def build_landmarker(model_path: Path) -> mp_vision.FaceLandmarker:
         min_face_detection_confidence=0.4,
         min_face_presence_confidence=0.4,
         min_tracking_confidence=0.4,
+        output_facial_transformation_matrixes=True,
     )
     return mp_vision.FaceLandmarker.create_from_options(options)
 
@@ -245,10 +248,20 @@ def analyze_image(
     if not result.face_landmarks:
         return None
     lms = result.face_landmarks[0]
-    pose = estimate_pose_from_landmarks(lms, w, h)
-    if pose is None:
-        return None
-    yaw, pitch, roll = pose
+
+    # Geometric pose is primary for aligned face sets (avoids bogus roll from PnP).
+    yaw, pitch, roll = estimate_pose_from_landmarks_geom(lms)
+    if result.facial_transformation_matrixes:
+        matrix_pose = estimate_pose_from_transform_matrix(
+            result.facial_transformation_matrixes[0]
+        )
+        # If geometry looks near-frontal but matrix shows clear yaw, blend toward matrix.
+        if matrix_pose is not None:
+            myaw, mpitch, _mroll = matrix_pose
+            if abs(yaw) < 8.0 and abs(myaw) > abs(yaw) + 5.0:
+                yaw = 0.35 * yaw + 0.65 * myaw
+            if abs(pitch) < 8.0 and abs(mpitch) > abs(pitch) + 5.0:
+                pitch = 0.35 * pitch + 0.65 * mpitch
     gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
     sharp = sharpness_score(gray)
     frac = face_fraction_from_landmarks(lms, w, h)
