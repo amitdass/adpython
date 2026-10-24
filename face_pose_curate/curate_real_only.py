@@ -36,6 +36,24 @@ DEFAULT_STEP = 5.0
 # Aligned faces are near upright; keep a loose guard only.
 DEFAULT_MAX_ROLL = 45.0
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
+# When scanning a wide tree, skip prior tool outputs / junk dirs by name.
+EXCLUDE_DIR_NAMES = {
+    "saved",
+    "saved_diverse",
+    "saved_visible",
+    "saved_real_wide",
+    "synth",
+    "synth_angles",
+    "real",
+    "real_sources",
+    ".git",
+    ".venv",
+    "venv",
+    "__pycache__",
+    "models",
+    "node_modules",
+    ".thumbnails",
+}
 
 MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/"
@@ -120,6 +138,11 @@ def ensure_model(model_path: Path) -> Path:
 def iter_images(root: Path, exclude_dirs: set[Path]) -> Iterable[Path]:
     root = root.resolve()
     exclude_resolved = {d.resolve() for d in exclude_dirs}
+    # Also exclude any directory whose name is in EXCLUDE_DIR_NAMES
+    for path in root.rglob("*"):
+        if path.is_dir() and path.name in EXCLUDE_DIR_NAMES:
+            exclude_resolved.add(path.resolve())
+
     for path in sorted(root.rglob("*")):
         if not path.is_file():
             continue

@@ -6,7 +6,8 @@
 
 1. **Real-only** — copy/select existing angles (`run_macos.sh` → `saved/`)
 2. **Mild gap-fill** — small warps into empty bins (`run_macos_synth.sh` → `saved_diverse/`)
-3. **Visible new angles** — stronger turns from a wide source tree (`run_macos_visible_synth.sh` → `saved_visible/`)
+3. ~~Visible warp synth~~ — **deprecated** (distorts faces; do not use)
+4. **Real-wide** — real-only scan of all `wcc1bex` photos (`run_macos_real_wide.sh` → `saved_real_wide/`)
 
 ## Your paths
 
@@ -39,30 +40,30 @@ git pull
 
 ## Setup & run (on your Mac)
 
-### A) Visibly different angles (recommended if mild synth looked “the same”)
+### A) Real-wide (recommended after bad warp results)
 
-Scans all of `wcc1bex` for more sources, picks ~120 diverse faces, and for each writes **new** views at yaw **±20/±30/±45°** (amplified warp so the turn is obvious). Skips tiny deltas on purpose.
+Scans **all** of `wcc1bex` for real faces and keeps the best photo per angle bin. **No warping.**
 
 ```bash
 cd ~/adpython/face_pose_curate
 git pull origin cursor/face-pose-curate-071f
-chmod +x run_macos_visible_synth.sh
-./run_macos_visible_synth.sh
+chmod +x run_macos_real_wide.sh
+./run_macos_real_wide.sh
 ```
 
-Output folder:
+Cleanup bad warp folder (optional):
 
-`.../aligned/saved_visible/synth_angles/`  ← **open this**
+```bash
+rm -rf "/Users/amdass/Documents/Cisco Icons/wcc1bex/untled folder/WebEx/data_src/aligned/saved_visible"
+```
 
-Also: `saved_visible/real_sources/` (which originals were used).
+**Why warps failed:** big 2D landmark warps cannot invent a true side view from a near-frontal aligned crop — they smear the face. Usable “new angles” need either more real photos or a real 3D-aware model (heavy local install), not amplify-warp.
 
-### A2) Mild gap-fill (earlier pass — subtle)
+### A2) Mild gap-fill (subtle; often not worth it on `aligned`)
 
 ```bash
 ./run_macos_synth.sh
 ```
-
-→ `saved_diverse/synth/` (often looks too similar on DeepFaceLab `aligned` crops).
 
 ### B) Real-only (previous step)
 
