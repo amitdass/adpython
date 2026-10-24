@@ -35,20 +35,78 @@ fi
 
 cd "$LP_DIR"
 
-# --- 2) venv + deps ---
+# --- 2) venv + deps (Python 3.10/3.11 only — 3.12+ often breaks numpy==1.26.4 wheels) ---
+pick_python() {
+  for cand in python3.11 python3.10 python3.12; do
+    if command -v "$cand" >/dev/null 2>&1; then
+      ver="$("$cand" -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')"
+      major="${ver%%.*}"
+      minor="${ver#*.}"
+      if [[ "$major" -eq 3 && "$minor" -ge 10 && "$minor" -le 12 ]]; then
+        echo "$cand"
+        return 0
+      fi
+    fi
+  done
+  # fall back to python3 only if 3.10–3.12
+  if command -v python3 >/dev/null 2>&1; then
+    ver="$(python3 -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')"
+    major="${ver%%.*}"
+    minor="${ver#*.}"
+    if [[ "$major" -eq 3 && "$minor" -ge 10 && "$minor" -le 12 ]]; then
+      echo "python3"
+      return 0
+    fi
+  fi
+  return 1
+}
+
+PY_BIN="$(pick_python || true)"
+if [[ -z "${PY_BIN}" ]]; then
+  echo "ERROR: LivePortrait needs Python 3.10, 3.11, or 3.12 (binary numpy wheels)."
+  echo "Your default python3 is likely 3.13+, which tries to compile numpy and fails."
+  echo
+  echo "Install once, then re-run this script:"
+  echo "  brew install python@3.11"
+  echo "  # then either recreate venv, or:"
+  echo "  rm -rf \"$LP_DIR/.venv\""
+  echo "  export LP_PYTHON=python3.11"
+  exit 1
+fi
+if [[ -n "${LP_PYTHON:-}" ]]; then
+  PY_BIN="$LP_PYTHON"
+fi
+
+echo "Using interpreter: $PY_BIN ($("$PY_BIN" -V 2>&1))"
+
+# Recreate venv if it was made with a bad Python (e.g. 3.13)
+if [[ -d .venv ]]; then
+  VENV_VER="$(.venv/bin/python -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")' 2>/dev/null || echo bad)"
+  V_MAJOR="${VENV_VER%%.*}"
+  V_MINOR="${VENV_VER#*.}"
+  if [[ "$VENV_VER" == "bad" || "$V_MAJOR" -ne 3 || "$V_MINOR" -lt 10 || "$V_MINOR" -gt 12 ]]; then
+    echo "Removing incompatible venv (was Python $VENV_VER)..."
+    rm -rf .venv
+  fi
+fi
+
 if [[ ! -d .venv ]]; then
-  echo "Creating LivePortrait venv (python3.10/3.11 preferred)..."
-  python3 -m venv .venv
+  echo "Creating LivePortrait venv with $PY_BIN ..."
+  "$PY_BIN" -m venv .venv
 fi
 # shellcheck disable=SC1091
 source .venv/bin/activate
-python -m pip install --upgrade pip
+python -m pip install --upgrade pip setuptools wheel
+
+echo "Installing numpy wheel first (never compile from source)..."
+pip install --only-binary=:all: "numpy==1.26.4" || pip install --only-binary=:all: "numpy>=1.26.4,<2"
 
 if [[ -f requirements_macOS.txt ]]; then
-  pip install -r requirements_macOS.txt
+  # Prefer wheels; skip rebuilds of numpy
+  pip install --only-binary=numpy -r requirements_macOS.txt
 else
   echo "requirements_macOS.txt missing — installing requirements.txt (may need tweaks)"
-  pip install -r requirements.txt || true
+  pip install --only-binary=numpy -r requirements.txt || true
   pip install onnxruntime-silicon || pip install onnxruntime || true
 fi
 

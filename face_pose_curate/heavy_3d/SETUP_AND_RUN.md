@@ -6,9 +6,22 @@ Everything runs on your Mac. Your face images are not uploaded. Only public mode
 ## What you need
 
 - **Apple Silicon** Mac (M1/M2/M3/M4). Intel is not really supported.
+- **Python 3.10, 3.11, or 3.12** (not 3.13 — numpy builds fail)
 - **16 GB RAM minimum**, 24–32 GB much happier
 - Disk: ~5–10 GB for code + models
 - Time: first setup can take a while; each image is slower than on NVIDIA
+
+### If you see `metadata-generation-failed` / numpy compile errors
+
+Your Mac is probably using **Python 3.13**. Fix:
+
+```bash
+brew install python@3.11
+rm -rf ~/LivePortrait/.venv
+cd ~/adpython/face_pose_curate
+export LP_PYTHON=python3.11
+./heavy_3d/run_macos_liveportrait_sides.sh
+```
 
 ## What it does
 
