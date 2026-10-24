@@ -128,21 +128,39 @@ fi
 # Ensure again after requirements (in case a resolver removed it)
 pip install "requests>=2.31,<3"
 
-# --- 3) pretrained weights ---
-if [[ ! -d pretrained_weights/insightface ]] && [[ ! -d pretrained_weights/liveportrait ]]; then
-  echo "Downloading pretrained weights (one-time, public models)..."
-  if command -v huggingface-cli >/dev/null 2>&1; then
-    huggingface-cli download KwaiVGI/LivePortrait --local-dir pretrained_weights --exclude "*.git*" "docs/*" || true
-  fi
-  # Official helper if present
-  if [[ -f scripts/download_models.py ]]; then
-    python scripts/download_models.py || true
-  elif [[ -f inference.py ]] && [[ ! -d pretrained_weights ]]; then
-    echo "Trying git-lfs / README download path..."
-    mkdir -p pretrained_weights
-    echo "If inference fails on missing weights, follow LivePortrait README 'Download pretrained weights'."
-  fi
+# --- 3) pretrained weights (required) ---
+WEIGHT_FILE="pretrained_weights/liveportrait/base_models/appearance_feature_extractor.pth"
+download_weights() {
+  echo "Downloading LivePortrait pretrained weights (public models only; not your photos)..."
+  pip install -U "huggingface_hub[cli]"
+  # Official repo id is KlingTeam/LivePortrait
+  huggingface-cli download KlingTeam/LivePortrait \
+    --local-dir pretrained_weights \
+    --exclude "*.git*" "README.md" "docs" || return 1
+  return 0
+}
+
+if [[ ! -f "$WEIGHT_FILE" ]]; then
+  download_weights || true
 fi
+if [[ ! -f "$WEIGHT_FILE" ]]; then
+  echo "Primary HF download incomplete; trying hf-mirror..."
+  export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
+  download_weights || true
+fi
+if [[ ! -f "$WEIGHT_FILE" ]]; then
+  echo "ERROR: Missing $WEIGHT_FILE"
+  echo "Download weights manually, then re-run:"
+  echo "  cd ~/LivePortrait"
+  echo "  source .venv/bin/activate"
+  echo "  pip install -U \"huggingface_hub[cli]\""
+  echo "  huggingface-cli download KlingTeam/LivePortrait --local-dir pretrained_weights --exclude \"*.git*\" \"README.md\" \"docs\""
+  echo "Or if HF is blocked:"
+  echo "  export HF_ENDPOINT=https://hf-mirror.com"
+  echo "  huggingface-cli download KlingTeam/LivePortrait --local-dir pretrained_weights --exclude \"*.git*\" \"README.md\" \"docs\""
+  exit 1
+fi
+echo "Weights OK: $WEIGHT_FILE"
 
 DRIVING="${DRIVING:-$LP_DIR/assets/examples/driving/d0.mp4}"
 if [[ ! -f "$DRIVING" ]]; then
