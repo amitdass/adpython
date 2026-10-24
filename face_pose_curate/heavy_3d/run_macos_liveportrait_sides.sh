@@ -107,6 +107,8 @@ python -m pip install --upgrade pip setuptools wheel
 
 echo "Installing numpy wheel first (never compile from source)..."
 pip install --only-binary=:all: "numpy==1.26.4" || pip install --only-binary=:all: "numpy>=1.26.4,<2"
+# InsightFace vendored code imports requests; not always in requirements_macOS.txt
+pip install "requests>=2.31,<3" "huggingface_hub>=0.20"
 
 if [[ -f requirements_macOS.txt ]]; then
   # Prefer wheels; skip rebuilds of numpy
@@ -116,6 +118,8 @@ else
   pip install --only-binary=numpy -r requirements.txt || true
   pip install onnxruntime-silicon || pip install onnxruntime || true
 fi
+# Ensure again after requirements (in case a resolver removed it)
+pip install "requests>=2.31,<3"
 
 # --- 3) pretrained weights ---
 if [[ ! -d pretrained_weights/insightface ]] && [[ ! -d pretrained_weights/liveportrait ]]; then
