@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Extract sharp SIDE / three-quarter face frames from a local video. No uploads.
+# Extract the most side-like face frames from a local video. No uploads.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
@@ -24,29 +24,32 @@ fi
 
 echo "Video:  $VIDEO"
 echo "Output: $OUTPUT"
-echo "Keeping frames with |yaw| >= 22° (side / three-quarter), best per 5° bin."
+echo "Keeps top-40 highest |yaw| frames + labeled debug timeline."
 echo
 
 python extract_side_poses_from_video.py \
   --video "$VIDEO" \
   --output "$OUTPUT" \
-  --every-n 3 \
-  --min-yaw 22 \
-  --also-frontal \
+  --every-n 2 \
+  --top-n 40 \
+  --min-yaw 8 \
   --dry-run
 
 echo
-read -r -p "Dry run OK? Extract side frames now? [y/N] " ans
+read -r -p "Dry run OK? Export frames + debug labels now? [y/N] " ans
 if [[ "${ans:-}" =~ ^[Yy]$ ]]; then
+  rm -rf "$OUTPUT"
   python extract_side_poses_from_video.py \
     --video "$VIDEO" \
     --output "$OUTPUT" \
-    --every-n 3 \
-    --min-yaw 22 \
-    --also-frontal
+    --every-n 2 \
+    --top-n 40 \
+    --min-yaw 8
   echo
-  echo "Open sides:"
-  echo "  open \"$OUTPUT/side\""
+  echo "1) Check labeled timeline (yaw printed on image):"
+  echo "   open \"$OUTPUT/debug_labeled\""
+  echo "2) Then check selected sides:"
+  echo "   open \"$OUTPUT/side\""
 else
   echo "Stopped after dry run."
 fi
