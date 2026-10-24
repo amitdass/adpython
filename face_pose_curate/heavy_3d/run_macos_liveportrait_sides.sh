@@ -5,7 +5,14 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 LP_DIR="${LP_DIR:-$HOME/LivePortrait}"
-SOURCE_DIR="${SOURCE_DIR:-/Users/amdass/Documents/Cisco Icons/wcc1bex/untled folder/WebEx/data_src/aligned/saved}"
+# Prefer curated real bins if present; otherwise the full aligned folder.
+_DEFAULT_SRC="/Users/amdass/Documents/Cisco Icons/wcc1bex/untled folder/WebEx/data_src/aligned"
+if [[ -d "${_DEFAULT_SRC}/saved_real_wide" ]]; then
+  _DEFAULT_SRC="${_DEFAULT_SRC}/saved_real_wide"
+elif [[ -d "${_DEFAULT_SRC}/saved" ]] && find "${_DEFAULT_SRC}/saved" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) 2>/dev/null | head -1 | grep -q .; then
+  _DEFAULT_SRC="${_DEFAULT_SRC}/saved"
+fi
+SOURCE_DIR="${SOURCE_DIR:-$_DEFAULT_SRC}"
 OUTPUT="${OUTPUT:-/Users/amdass/Documents/Cisco Icons/wcc1bex/untled folder/WebEx/data_src/aligned/saved_3d_sides}"
 SOURCE_MAX="${SOURCE_MAX:-5}"
 EVERY_N="${EVERY_N:-2}"
