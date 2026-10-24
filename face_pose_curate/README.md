@@ -8,6 +8,7 @@
 2. **Mild gap-fill** — small warps into empty bins (`run_macos_synth.sh` → `saved_diverse/`)
 3. ~~Visible warp synth~~ — **deprecated** (distorts faces; do not use)
 4. **Real-wide** — real-only scan of all `wcc1bex` photos (`run_macos_real_wide.sh` → `saved_real_wide/`)
+5. **Video → side frames** — extract real side poses from an MP4 (`run_macos_video_sides.sh` → `saved_video_sides/`)
 
 ## Your paths
 
