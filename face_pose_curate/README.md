@@ -1,14 +1,19 @@
-# Real-only face pose curation (macOS, local)
+# Face pose curation + local gap-fill (macOS)
 
-Selects the widest **real** yaw/pitch coverage from your aligned faces.  
-**No synthesis. No uploads of your photos.** The only optional network use is a one-time download of the public MediaPipe face-landmarker model.
+**No uploads of your photos.** Optional network use is only public model weights (MediaPipe).
+
+### Modes
+
+1. **Real-only** — copy/select existing angles (`run_macos.sh` → `saved/`)
+2. **Real + synth** — also **generate new views** by warping aligned faces into missing bins (`run_macos_synth.sh` → `saved_diverse/`)
 
 ## Your paths
 
 | Role | Path |
 |------|------|
 | Input | `/Users/amdass/Documents/Cisco Icons/wcc1bex/untled folder/WebEx/data_src/aligned` |
-| Output | `/Users/amdass/Documents/Cisco Icons/wcc1bex/untled folder/WebEx/data_src/aligned/saved` |
+| Real-only output | `.../aligned/saved` |
+| Diverse output | `.../aligned/saved_diverse` (`real/` + `synth/`) |
 
 The script **skips** the `saved` output folder when scanning input, so re-runs do not re-ingest previous results.
 
@@ -32,6 +37,28 @@ git pull
 **Note:** DeepFaceLab `aligned` crops are warped toward frontal, so extreme yaw/pitch coverage will be lower than in raw frames. For wider true angles, point `--input` at unaligned source frames later.
 
 ## Setup & run (on your Mac)
+
+### A) Generate new angles (recommended next step)
+
+Uses **all** images in `aligned` as sources. For each empty yaw/pitch bin, warps the nearest real face toward that pose (max **20° yaw** / **12° pitch** from a real source so quality stays usable).
+
+```bash
+cd ~/adpython/face_pose_curate   # or your clone path
+git pull origin cursor/face-pose-curate-071f
+chmod +x run_macos_synth.sh
+./run_macos_synth.sh
+```
+
+Output:
+
+- `saved_diverse/real/` — selected real faces  
+- `saved_diverse/synth/` — **new** warped images  
+- `manifest.csv` — `kind=real|synth` plus source pose  
+- `coverage_heatmap.png` — 0=empty, 1=real, 2=synth  
+
+Synths are **not** copies: they are new pixels. They still use your face texture, so identity stays close; large angle jumps are blocked on purpose.
+
+### B) Real-only (previous step)
 
 ```bash
 cd /path/to/face_pose_curate
