@@ -83,9 +83,12 @@ echo "Driving pose video: $DRIVING"
 # --- 4) pick source images (prefer fewer, sharper files) ---
 mkdir -p "$OUTPUT/sources_used" "$OUTPUT/animations" "$OUTPUT/side"
 SOURCES=()
+_SRC_LIST="$(mktemp)"
+find "$SOURCE_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) 2>/dev/null | head -n "$SOURCE_MAX" > "$_SRC_LIST" || true
 while IFS= read -r line; do
-  SOURCES+=("$line")
-done < <(find "$SOURCE_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) 2>/dev/null | head -n "$SOURCE_MAX")
+  [[ -n "$line" ]] && SOURCES+=("$line")
+done < "$_SRC_LIST"
+rm -f "$_SRC_LIST"
 if [[ ${#SOURCES[@]} -eq 0 ]]; then
   echo "No images found in SOURCE_DIR=$SOURCE_DIR"
   echo "Set SOURCE_DIR to a folder of your face photos (near-frontal works best)."
