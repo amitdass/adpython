@@ -393,6 +393,9 @@ def main() -> int:
 
     accepted: list[FaceSample] = []
     skipped = defaultdict(int)
+    all_yaw: list[float] = []
+    all_pitch: list[float] = []
+    all_roll: list[float] = []
 
     for i, path in enumerate(images, 1):
         if i % 50 == 0 or i == len(images):
@@ -401,6 +404,9 @@ def main() -> int:
         if sample is None:
             skipped["no_face_or_pose"] += 1
             continue
+        all_yaw.append(sample.yaw)
+        all_pitch.append(sample.pitch)
+        all_roll.append(sample.roll)
         if abs(sample.roll) > args.max_roll:
             skipped["roll"] += 1
             continue
@@ -411,6 +417,17 @@ def main() -> int:
             skipped["pitch_range"] += 1
             continue
         accepted.append(sample)
+
+    if all_yaw:
+        def _pct(vals: list[float], q: float) -> float:
+            return float(np.percentile(np.asarray(vals, dtype=np.float64), q))
+
+        print(
+            "Pose distribution (all detected faces): "
+            f"yaw[{_pct(all_yaw, 5):.1f} .. {_pct(all_yaw, 95):.1f}]  "
+            f"pitch[{_pct(all_pitch, 5):.1f} .. {_pct(all_pitch, 95):.1f}]  "
+            f"roll[{_pct(all_roll, 5):.1f} .. {_pct(all_roll, 95):.1f}]"
+        )
 
     bins: dict[tuple[float, float], list[FaceSample]] = defaultdict(list)
     for s in accepted:
