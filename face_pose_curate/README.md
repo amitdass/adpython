@@ -9,6 +9,7 @@
 3. ~~Visible warp synth~~ — **deprecated** (distorts faces; do not use)
 4. **Real-wide** — real-only scan of all `wcc1bex` photos (`run_macos_real_wide.sh` → `saved_real_wide/`)
 5. **Video → side frames** — extract real side poses from an MP4 (`run_macos_video_sides.sh` → `saved_video_sides/`)
+6. **Heavy local front→side** — LivePortrait on Apple Silicon (`heavy_3d/run_macos_liveportrait_sides.sh` → `saved_3d_sides/`) — see `heavy_3d/SETUP_AND_RUN.md`
 
 ## Your paths
 
@@ -59,6 +60,18 @@ rm -rf "/Users/amdass/Documents/Cisco Icons/wcc1bex/untled folder/WebEx/data_src
 ```
 
 **Why warps failed:** big 2D landmark warps cannot invent a true side view from a near-frontal aligned crop — they smear the face. Usable “new angles” need either more real photos or a real 3D-aware model (heavy local install), not amplify-warp.
+
+### C) Front → side with LivePortrait (option B)
+
+This **does** generate new side-ish views from your frontal photos (local, Apple Silicon):
+
+```bash
+cd ~/adpython/face_pose_curate
+chmod +x heavy_3d/run_macos_liveportrait_sides.sh
+./heavy_3d/run_macos_liveportrait_sides.sh
+```
+
+Details / limits: [`heavy_3d/SETUP_AND_RUN.md`](heavy_3d/SETUP_AND_RUN.md).
 
 ### A2) Mild gap-fill (subtle; often not worth it on `aligned`)
 

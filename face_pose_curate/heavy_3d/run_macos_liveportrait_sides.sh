@@ -82,7 +82,10 @@ echo "Driving pose video: $DRIVING"
 
 # --- 4) pick source images (prefer fewer, sharper files) ---
 mkdir -p "$OUTPUT/sources_used" "$OUTPUT/animations" "$OUTPUT/side"
-mapfile -t SOURCES < <(find "$SOURCE_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) 2>/dev/null | head -n "$SOURCE_MAX")
+SOURCES=()
+while IFS= read -r line; do
+  SOURCES+=("$line")
+done < <(find "$SOURCE_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' -o -iname '*.png' \) 2>/dev/null | head -n "$SOURCE_MAX")
 if [[ ${#SOURCES[@]} -eq 0 ]]; then
   echo "No images found in SOURCE_DIR=$SOURCE_DIR"
   echo "Set SOURCE_DIR to a folder of your face photos (near-frontal works best)."
@@ -90,7 +93,9 @@ if [[ ${#SOURCES[@]} -eq 0 ]]; then
 fi
 
 echo "Using ${#SOURCES[@]} source image(s):"
-printf '  %s\n' "${SOURCES[@]}"
+for s in "${SOURCES[@]}"; do
+  echo "  $s"
+done
 
 # --- 5) run LivePortrait per source ---
 export PYTORCH_ENABLE_MPS_FALLBACK=1
