@@ -132,11 +132,27 @@ pip install "requests>=2.31,<3"
 WEIGHT_FILE="pretrained_weights/liveportrait/base_models/appearance_feature_extractor.pth"
 download_weights() {
   echo "Downloading LivePortrait pretrained weights (public models only; not your photos)..."
-  pip install -U "huggingface_hub[cli]"
-  # Official repo id is KlingTeam/LivePortrait
-  huggingface-cli download KlingTeam/LivePortrait \
-    --local-dir pretrained_weights \
-    --exclude "*.git*" "README.md" "docs" || return 1
+  pip install -U "huggingface_hub"
+  # Newer hub versions expose `hf` (not always `huggingface-cli`)
+  if command -v hf >/dev/null 2>&1; then
+    hf download KlingTeam/LivePortrait \
+      --local-dir pretrained_weights \
+      --exclude "*.git*" "README.md" "docs" || return 1
+  elif command -v huggingface-cli >/dev/null 2>&1; then
+    huggingface-cli download KlingTeam/LivePortrait \
+      --local-dir pretrained_weights \
+      --exclude "*.git*" "README.md" "docs" || return 1
+  else
+    python - <<'PY' || return 1
+from huggingface_hub import snapshot_download
+snapshot_download(
+    repo_id="KlingTeam/LivePortrait",
+    local_dir="pretrained_weights",
+    ignore_patterns=["*.git*", "README.md", "docs", "docs/*"],
+)
+print("snapshot_download finished")
+PY
+  fi
   return 0
 }
 
