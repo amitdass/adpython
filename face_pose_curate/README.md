@@ -5,7 +5,8 @@
 ### Modes
 
 1. **Real-only** — copy/select existing angles (`run_macos.sh` → `saved/`)
-2. **Real + synth** — also **generate new views** by warping aligned faces into missing bins (`run_macos_synth.sh` → `saved_diverse/`)
+2. **Mild gap-fill** — small warps into empty bins (`run_macos_synth.sh` → `saved_diverse/`)
+3. **Visible new angles** — stronger turns from a wide source tree (`run_macos_visible_synth.sh` → `saved_visible/`)
 
 ## Your paths
 
@@ -38,25 +39,30 @@ git pull
 
 ## Setup & run (on your Mac)
 
-### A) Generate new angles (recommended next step)
+### A) Visibly different angles (recommended if mild synth looked “the same”)
 
-Uses **all** images in `aligned` as sources. For each empty yaw/pitch bin, warps the nearest real face toward that pose (max **20° yaw** / **12° pitch** from a real source so quality stays usable).
+Scans all of `wcc1bex` for more sources, picks ~120 diverse faces, and for each writes **new** views at yaw **±20/±30/±45°** (amplified warp so the turn is obvious). Skips tiny deltas on purpose.
 
 ```bash
-cd ~/adpython/face_pose_curate   # or your clone path
+cd ~/adpython/face_pose_curate
 git pull origin cursor/face-pose-curate-071f
-chmod +x run_macos_synth.sh
+chmod +x run_macos_visible_synth.sh
+./run_macos_visible_synth.sh
+```
+
+Output folder:
+
+`.../aligned/saved_visible/synth_angles/`  ← **open this**
+
+Also: `saved_visible/real_sources/` (which originals were used).
+
+### A2) Mild gap-fill (earlier pass — subtle)
+
+```bash
 ./run_macos_synth.sh
 ```
 
-Output:
-
-- `saved_diverse/real/` — selected real faces  
-- `saved_diverse/synth/` — **new** warped images  
-- `manifest.csv` — `kind=real|synth` plus source pose  
-- `coverage_heatmap.png` — 0=empty, 1=real, 2=synth  
-
-Synths are **not** copies: they are new pixels. They still use your face texture, so identity stays close; large angle jumps are blocked on purpose.
+→ `saved_diverse/synth/` (often looks too similar on DeepFaceLab `aligned` crops).
 
 ### B) Real-only (previous step)
 
