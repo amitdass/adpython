@@ -33,6 +33,13 @@ fi
 if [[ "$(uname -m)" != "arm64" ]]; then
   echo "WARNING: Apple Silicon (arm64) is strongly recommended. Intel is untested."
 fi
+if ! command -v ffmpeg >/dev/null 2>&1 || ! command -v ffprobe >/dev/null 2>&1; then
+  echo "ERROR: FFmpeg not found (LivePortrait needs ffmpeg + ffprobe)."
+  echo "Install once, then re-run:"
+  echo "  brew install ffmpeg"
+  exit 1
+fi
+echo "FFmpeg OK: $(ffmpeg -version 2>/dev/null | head -1)"
 
 # --- 1) clone LivePortrait ---
 if [[ ! -d "$LP_DIR/.git" ]]; then
