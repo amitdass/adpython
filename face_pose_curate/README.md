@@ -16,8 +16,20 @@ The script **skips** the `saved` output folder when scanning input, so re-runs d
 
 - Yaw: **−75° … +75°**, step **5°**
 - Pitch: **−25° … +25°**, step **5°**
-- Roll: images with **\|roll\| > 15°** are skipped
+- Roll: images with **\|roll\| > 45°** are skipped (aligned faces are usually near 0°)
 - Keep **1** best real image per bin (override with `--per-bin`)
+
+### Re-run after a bad first pass
+
+If an earlier run only filled a handful of bins (e.g. almost everything skipped as `roll`), pull the latest script, remove the old output, and run again:
+
+```bash
+rm -rf "/Users/amdass/Documents/Cisco Icons/wcc1bex/untled folder/WebEx/data_src/aligned/saved"
+git pull
+./run_macos.sh
+```
+
+**Note:** DeepFaceLab `aligned` crops are warped toward frontal, so extreme yaw/pitch coverage will be lower than in raw frames. For wider true angles, point `--input` at unaligned source frames later.
 
 ## Setup & run (on your Mac)
 
