@@ -133,17 +133,23 @@ WEIGHT_FILE="pretrained_weights/liveportrait/base_models/appearance_feature_extr
 download_weights() {
   echo "Downloading LivePortrait pretrained weights (public models only; not your photos)..."
   pip install -U "huggingface_hub"
+  # Avoid HF Xet transport bugs ("Byte range not sequential")
+  export HF_HUB_DISABLE_XET=1
+  export HF_HUB_ENABLE_HF_TRANSFER=0
   # Newer hub versions expose `hf` (not always `huggingface-cli`)
   if command -v hf >/dev/null 2>&1; then
-    hf download KlingTeam/LivePortrait \
+    HF_HUB_DISABLE_XET=1 hf download KlingTeam/LivePortrait \
       --local-dir pretrained_weights \
       --exclude "*.git*" "README.md" "docs" || return 1
   elif command -v huggingface-cli >/dev/null 2>&1; then
-    huggingface-cli download KlingTeam/LivePortrait \
+    HF_HUB_DISABLE_XET=1 huggingface-cli download KlingTeam/LivePortrait \
       --local-dir pretrained_weights \
       --exclude "*.git*" "README.md" "docs" || return 1
   else
-    python - <<'PY' || return 1
+    HF_HUB_DISABLE_XET=1 python - <<'PY' || return 1
+import os
+os.environ["HF_HUB_DISABLE_XET"] = "1"
+os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "0"
 from huggingface_hub import snapshot_download
 snapshot_download(
     repo_id="KlingTeam/LivePortrait",
