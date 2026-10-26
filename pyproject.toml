@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "migration-topology"
+version = "0.1.0"
+description = "Render a topology diagram from a structured device-migration description."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+migration-topology = "migration_topology.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
