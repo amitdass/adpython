@@ -1,0 +1,82 @@
+{
+  "title": "ASR 920 to NCS 540 like-for-like migration",
+  "kind": "like-for-like",
+  "status": "blocked",
+  "blocked_on": [
+    "the real running-config",
+    "the port map"
+  ],
+  "network": {
+    "label": "Network",
+    "note": "Far-end peers and interfaces are not recorded"
+  },
+  "source": {
+    "name": "ASR 920",
+    "vendor": "Cisco",
+    "os": "IOS XE",
+    "nso_device_name": null
+  },
+  "target": {
+    "name": "NCS 540",
+    "vendor": "Cisco",
+    "os": "IOS XR",
+    "nso_device_name": null
+  },
+  "links": [
+    {
+      "name": "Ethernet uplink 1",
+      "source_port": null,
+      "target_port": null,
+      "move_order": null,
+      "note": "Which physical link moves first is not recorded."
+    },
+    {
+      "name": "Ethernet uplink 2",
+      "source_port": null,
+      "target_port": null,
+      "move_order": null,
+      "note": "Moves after uplink 1 has been moved and checked. The physical port is not recorded."
+    }
+  ],
+  "controller": {
+    "name": "Cisco Crosswork Network Controller",
+    "short_name": "CNC",
+    "note": "NSO is embedded in CNC.",
+    "workflow_manager": {
+      "name": "Crosswork Workflow Manager",
+      "short_name": "CWM",
+      "role": "Runs each stage and that stage's rollback."
+    },
+    "nso": {
+      "name": "NSO",
+      "short_name": "NSO",
+      "role": "Renders and commits the template for each stage."
+    }
+  },
+  "stages": [
+    {
+      "order": 1,
+      "name": "Uplink move",
+      "template_kind": "device template",
+      "summary": "Both ethernet uplinks move from the ASR 920 onto the NCS 540 before IS-IS, SR-MPLS, or VPN work."
+    },
+    {
+      "order": 2,
+      "name": "IS-IS",
+      "template_kind": "device template",
+      "summary": "IS-IS device template, after both uplinks are on the NCS 540."
+    },
+    {
+      "order": 3,
+      "name": "SR-MPLS",
+      "template_kind": "device template",
+      "summary": "SR-MPLS device template, after IS-IS."
+    },
+    {
+      "order": 4,
+      "name": "VPN services",
+      "template_kind": "service template or L2VPN/L3VPN package",
+      "summary": "L2VPN and L3VPN, and config tied to those services."
+    }
+  ]
+}
